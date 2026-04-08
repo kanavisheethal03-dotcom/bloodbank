@@ -1,0 +1,765 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Blood Bank Management System API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: donors
+    description: Donor management operations
+  - name: blood-requests
+    description: Blood request operations
+  - name: blood-stock
+    description: Blood stock/availability operations
+  - name: admin
+    description: Admin operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /donors:
+    get:
+      operationId: listDonors
+      tags: [donors]
+      summary: List all donors
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Pending, Eligible, Rejected, Deferred]
+        - name: blood_group
+          in: query
+          schema:
+            type: string
+        - name: city
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of donors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Donor"
+    post:
+      operationId: createDonor
+      tags: [donors]
+      summary: Register a new donor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDonorBody"
+      responses:
+        "201":
+          description: Donor created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Donor"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /donors/{id}:
+    get:
+      operationId: getDonor
+      tags: [donors]
+      summary: Get donor by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Donor details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Donor"
+        "404":
+          description: Donor not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateDonorStatus
+      tags: [donors]
+      summary: Update donor status (Accept/Reject/Defer)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDonorStatusBody"
+      responses:
+        "200":
+          description: Donor updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Donor"
+        "404":
+          description: Donor not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /donors/{id}/consent:
+    patch:
+      operationId: updateDonorConsent
+      tags: [donors]
+      summary: Update donor consent status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDonorConsentBody"
+      responses:
+        "200":
+          description: Consent updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Donor"
+
+  /donors/search:
+    get:
+      operationId: searchDonors
+      tags: [donors]
+      summary: Search eligible donors by blood group and city
+      parameters:
+        - name: blood_group
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: city
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching eligible donors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DonorPublic"
+
+  /blood-requests:
+    get:
+      operationId: listBloodRequests
+      tags: [blood-requests]
+      summary: List all blood requests
+      responses:
+        "200":
+          description: List of blood requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BloodRequest"
+    post:
+      operationId: createBloodRequest
+      tags: [blood-requests]
+      summary: Submit a blood request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBloodRequestBody"
+      responses:
+        "201":
+          description: Blood request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BloodRequest"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /blood-requests/{id}/status:
+    patch:
+      operationId: updateBloodRequestStatus
+      tags: [blood-requests]
+      summary: Update blood request status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBloodRequestStatusBody"
+      responses:
+        "200":
+          description: Updated blood request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BloodRequest"
+
+  /blood-stock:
+    get:
+      operationId: listBloodStock
+      tags: [blood-stock]
+      summary: Get blood stock availability for all groups
+      responses:
+        "200":
+          description: Blood stock by group
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BloodStock"
+
+  /blood-stock/{blood_group}:
+    get:
+      operationId: getBloodStockByGroup
+      tags: [blood-stock]
+      summary: Get blood stock for a specific blood group
+      parameters:
+        - name: blood_group
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Blood stock for the group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BloodStock"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [admin]
+      summary: Get dashboard summary statistics
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminLoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /emergency:
+    post:
+      operationId: submitEmergencySOS
+      tags: [emergency]
+      summary: Submit an emergency SOS request for AI matchmaking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                blood_group:
+                  type: string
+                city:
+                  type: string
+                urgency:
+                  type: string
+                  enum: [low, high, critical]
+              required:
+                - blood_group
+                - city
+      responses:
+        "200":
+          description: AI match result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmergencyMatchResponse"
+
+  /blood-stock/inventory/all:
+    get:
+      operationId: listDetailedInventory
+      tags: [blood-stock]
+      summary: Get detailed inventory with expiry tracking
+      responses:
+        "200":
+          description: Detailed inventory list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BloodBagDetailed"
+
+  /chat:
+    post:
+      operationId: sendChatMessage
+      tags: [chatbot]
+      summary: Send a message to the AI medical assistant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                messages:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                        enum: [user, assistant, system]
+                      content:
+                        type: string
+                    required:
+                      - role
+                      - content
+              required:
+                - messages
+      responses:
+        "200":
+          description: AI response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+
+components:
+  schemas:
+    EmergencyMatchResponse:
+      type: object
+      properties:
+        match:
+          type: object
+          nullable: true
+          properties:
+            type:
+              type: string
+            name:
+              type: string
+            phone:
+              type: string
+            available_units:
+              type: integer
+            estimated_delivery:
+              type: string
+        ai_summary:
+          type: string
+        urgency_level:
+          type: string
+        search_results_count:
+          type: integer
+      required:
+        - ai_summary
+        - urgency_level
+        - search_results_count
+
+    BloodBagDetailed:
+      type: object
+      properties:
+        id:
+          type: integer
+        blood_group:
+          type: string
+        units:
+          type: integer
+        donation_date:
+          type: string
+        expiry_date:
+          type: string
+        days_until_expiry:
+          type: integer
+        status:
+          type: string
+          enum: [Urgent, Use Soon, Safe]
+      required:
+        - id
+        - blood_group
+        - units
+        - donation_date
+        - expiry_date
+        - days_until_expiry
+        - status
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    Donor:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        age:
+          type: integer
+        blood_group:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        weight:
+          type: number
+        disease:
+          type: string
+        last_donation_date:
+          type: string
+          nullable: true
+        city:
+          type: string
+        status:
+          type: string
+          enum: [Pending, Eligible, Rejected, Deferred]
+        consent_status:
+          type: string
+          enum: [None, Accepted, Rejected]
+        registration_date:
+          type: string
+      required:
+        - id
+        - name
+        - age
+        - blood_group
+        - phone
+        - email
+        - weight
+        - disease
+        - city
+        - status
+        - consent_status
+        - registration_date
+
+    DonorPublic:
+      type: object
+      description: Donor info visible to patients (contact hidden until consent)
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        blood_group:
+          type: string
+        city:
+          type: string
+        status:
+          type: string
+        consent_status:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+      required:
+        - id
+        - name
+        - blood_group
+        - city
+        - status
+        - consent_status
+
+    CreateDonorBody:
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+        blood_group:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        weight:
+          type: number
+        disease:
+          type: string
+        last_donation_date:
+          type: string
+          nullable: true
+        city:
+          type: string
+      required:
+        - name
+        - age
+        - blood_group
+        - phone
+        - email
+        - weight
+        - disease
+        - city
+
+    UpdateDonorStatusBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [Pending, Eligible, Rejected, Deferred]
+      required:
+        - status
+
+    UpdateDonorConsentBody:
+      type: object
+      properties:
+        consent_status:
+          type: string
+          enum: [None, Accepted, Rejected]
+      required:
+        - consent_status
+
+    BloodRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        patient_name:
+          type: string
+        blood_group:
+          type: string
+        units_required:
+          type: integer
+        hospital_name:
+          type: string
+        contact_number:
+          type: string
+        city:
+          type: string
+        request_status:
+          type: string
+          enum: [Pending, Accepted, Rejected, Fulfilled]
+        created_at:
+          type: string
+      required:
+        - id
+        - patient_name
+        - blood_group
+        - units_required
+        - hospital_name
+        - contact_number
+        - city
+        - request_status
+        - created_at
+
+    CreateBloodRequestBody:
+      type: object
+      properties:
+        patient_name:
+          type: string
+        blood_group:
+          type: string
+        units_required:
+          type: integer
+        hospital_name:
+          type: string
+        contact_number:
+          type: string
+        city:
+          type: string
+      required:
+        - patient_name
+        - blood_group
+        - units_required
+        - hospital_name
+        - contact_number
+        - city
+
+    UpdateBloodRequestStatusBody:
+      type: object
+      properties:
+        request_status:
+          type: string
+          enum: [Pending, Accepted, Rejected, Fulfilled]
+      required:
+        - request_status
+
+    BloodStock:
+      type: object
+      properties:
+        id:
+          type: integer
+        blood_group:
+          type: string
+        units_available:
+          type: integer
+        updated_at:
+          type: string
+      required:
+        - id
+        - blood_group
+        - units_available
+        - updated_at
+
+    DashboardSummary:
+      type: object
+      properties:
+        total_donors:
+          type: integer
+        eligible_donors:
+          type: integer
+        pending_donors:
+          type: integer
+        rejected_donors:
+          type: integer
+        deferred_donors:
+          type: integer
+        total_requests:
+          type: integer
+        pending_requests:
+          type: integer
+        total_units_available:
+          type: integer
+        blood_group_stats:
+          type: array
+          items:
+            type: object
+            properties:
+              blood_group:
+                type: string
+              count:
+                type: integer
+              units:
+                type: integer
+            required:
+              - blood_group
+              - count
+              - units
+      required:
+        - total_donors
+        - eligible_donors
+        - pending_donors
+        - rejected_donors
+        - deferred_donors
+        - total_requests
+        - pending_requests
+        - total_units_available
+        - blood_group_stats
+
+    AdminLoginBody:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    AdminLoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        token:
+          type: string
+        message:
+          type: string
+      required:
+        - success
+        - token
+        - message
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+        - message
